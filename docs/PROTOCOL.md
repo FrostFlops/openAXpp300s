@@ -11,7 +11,7 @@ Every protocol statement is tagged with how it is known.
 | Tag | Meaning |
 |---|---|
 | FIRMWARE | Seen in the disassembly of the supply firmware V1.4.4. The address of the code is given (`0x0800xxxx`, flash) or of the variable (`0x2000xxxx`, RAM). Where the disassembly was also run in an emulator the text says so. |
-| MEASURED | Observed on a real supply on 2026-11-07, in two sessions: AX PP300S firmware V1.4.4, Windows 11, CH340 USB-serial bridge, input 19.8 V (in the second session from a 65 W USB-PD charger on the Type-C power input). Reference instrument: a Fluke 289, as a voltmeter (10 MOhm input) and, in series with an electronic load, as an ammeter (A jack). |
+| MEASURED | Observed on a real supply on 2026-11-07, in three sessions: AX PP300S firmware V1.4.4, Windows 11, CH340 USB-serial bridge, input 19.8 V (in the second and third sessions from a 65 W USB-PD charger on the Type-C power input). Reference instrument: a Fluke 289, as a voltmeter (10 MOhm input) and, in series with an electronic load, as an ammeter (A jack). |
 | VENDOR | Taken from the vendor serial-protocol PDF, the vendor user manual V1.1, the vendor PC application V1.2, or the change log that comes with firmware V1.4.4. |
 | INFERRED | Concluded from code, names or analogy but not proven. Treat it as a hypothesis. |
 
@@ -19,7 +19,7 @@ All multi-byte integers on the wire are little-endian unless stated otherwise. H
 
 ### Hardware status
 
-Verified on the real supply (firmware V1.4.4, Windows 11, CH340), 2026-11-07, in two sessions.
+Verified on the real supply (firmware V1.4.4, Windows 11, CH340), 2026-11-07, in three sessions.
 
 First session:
 
@@ -35,7 +35,7 @@ Second session (the tool's latest code, after the review fixes; input from a 65 
 
 - VSET accuracy from 0.5 V to 30 V, including boost to 20, 24 and 30 V (section 12.2);
 - the MCP server against the real supply (ports, status, selftest, set, output on and off, watch, log, sequence and the tool's refusals);
-- CV under load, and the current limit (CC) with an electronic load against the Fluke 289 as ammeter (sections 12.3 and 12.4);
+- CV under load, and the current limit (CC) from 0.1 A to 1 A, before the current calibration, with an electronic load against the Fluke 289 as ammeter (sections 12.3 and 12.4);
 - the CC flag (byte 11) in CV and in CC under load (section 5.3), and its alternation between CC and CV with a load in constant-resistance mode (section 12.6);
 - lowering ISET and OCP together while 1 A flows (ISET first, no trip);
 - CV-first against CC-first priority (register 0x10): its effect on the switch-on current (section 12.5);
@@ -43,11 +43,15 @@ Second session (the tool's latest code, after the review fixes; input from a 65 
 - the Chinese screen: parameter lists (effect, live change, selection; section 6.3), a Digital VSET and DELAY ignored there (section 6.1), cut-off current and cut-off time (section 8), and the fact that cut-offs are silent;
 - the output switched on with the front-panel output key, with no host frame, as seen by the Fluke 289 (section 5.4).
 
+Third session (after the user calibrated the supply's current on the front panel against the Fluke 289; same input):
+
+- the current limit (CC) from 0.05 A to 5 A against the Fluke 289, inside the vendor specification at every point (section 12.4); CC verified up to 5 A and about 17.5 W, no protection tripped.
+
 Not yet verified on hardware:
 
-- OCP, OPP and OTP trips (only two OVP trips were seen, in the first session; no protection tripped in the second);
+- OCP, OPP and OTP trips (only two OVP trips were seen, in the first session; no protection tripped in the second or third);
 - the effects of the on-device settings menu (section 10.2);
-- currents above about 1.2 A and powers above about 15 W;
+- currents above 5 A and powers above about 20 W;
 - the DC5525 input connector;
 - CC accuracy at output voltages other than about 3 V (all CC points were taken there);
 - the EEPROM writes themselves: there is code evidence that every frame, status queries included, sets the save flag (section 9), but no write was observed on the hardware.
@@ -195,7 +199,7 @@ Meaning for hosts:
 | Condition | Byte 11 | Evidence |
 |---|---|---|
 | Output on, in constant voltage | 0 | MEASURED (after soft start, also in CV under a 0.5 A load) |
-| Output on, in constant current | 1 | FIRMWARE; MEASURED under load (electronic load in CV mode at 3.0 V, ISET 0.1 to 1.0 A: the tool reported CC at every step) |
+| Output on, in constant current | 1 | FIRMWARE; MEASURED under load (electronic load in CV mode at 3.0 V, ISET 0.1 to 1.0 A in the second session and 0.05 to 5 A in the third: the tool reported CC at every step) |
 | First about 1.1 s after the output switches on (soft start: the output stays at about 0.011 V, then rises) | 1 | MEASURED |
 | Output off | Not meaningful. It reads 1 (seen once as 0). The sense node reads low with no output; the cause is INFERRED. | MEASURED |
 
@@ -367,7 +371,7 @@ On a trip, FIRMWARE: the output-enable pin is driven low, both `0x20000101` and 
 - A remote ON (register 0x08) after a trip re-enables the output; nothing on that path reads the trip flags. MEASURED: after an OVP trip a later remote ON worked. If the fault persists it trips again.
 - A trip is visible to a host only as byte 12 falling to 0 (section 5.4).
 
-MEASURED: two OVP trips. (1) OVP 2.00 V with VSET 3.00 V (deliberate): the output turned off as the voltage rose, byte 12 went to 0 and byte 11 read 1; the alarm sounded until a front-panel key was pressed. (2) VSET 3.00 V with OVP 3.00 V (accidental): it tripped at the step from 2 V, because the voltage overshoots the setpoint during a step. This is why the tool keeps OVP at least `max(0.2 V, 1.5 %)` above VSET (section 13). Not yet MEASURED: OCP, OPP, OTP trips. No protection tripped in the second session. The cut-offs of the Chinese screen are not protections: they are silent (section 8).
+MEASURED: two OVP trips. (1) OVP 2.00 V with VSET 3.00 V (deliberate): the output turned off as the voltage rose, byte 12 went to 0 and byte 11 read 1; the alarm sounded until a front-panel key was pressed. (2) VSET 3.00 V with OVP 3.00 V (accidental): it tripped at the step from 2 V, because the voltage overshoots the setpoint during a step. This is why the tool keeps OVP at least `max(0.2 V, 1.5 %)` above VSET (section 13). Not yet MEASURED: OCP, OPP, OTP trips. No protection tripped in the second or third session. The cut-offs of the Chinese screen are not protections: they are silent (section 8).
 
 OVP and OCP values set from the host are persisted only through the cursor rule in section 6.6; OPP and OTP only if the front-panel settings menu is exited afterwards.
 
@@ -487,7 +491,7 @@ INFERRED from the code paths above, unless marked.
 
 ## 12. Measured timings and accuracy
 
-MEASURED on 2026-11-07, in two sessions (AX PP300S firmware V1.4.4, Windows 11, CH340, input 19.8 V). Timings are from the first session unless marked.
+MEASURED on 2026-11-07, in three sessions (AX PP300S firmware V1.4.4, Windows 11, CH340, input 19.8 V). Timings are from the first session unless marked.
 
 ### 12.1 Timings
 
@@ -551,7 +555,9 @@ Electronic load in constant-resistance mode at 10 Ohm, the Fluke 289 (A jack) in
 
 ### 12.4 Current limit (CC) accuracy
 
-Electronic load in constant-voltage mode at 3.0 V, VSET 5 V, so that the supply has to limit the current; the Fluke 289 in series.
+Electronic load in constant-voltage mode at 3.0 V, VSET 5 V, so that the supply has to limit the current; the Fluke 289 (A jack) in series. The meter had recently been checked on current: 5 A applied read 4.997 A, 50 mA read 0.04991 A, 400 mA read 0.39995 A (errors of -0.06 %, -0.18 % and -0.01 %), much better than the supply's 0.1 % + 5 mA.
+
+Before the current calibration (second session):
 
 | ISET (A) | Meter (A) | Meter minus ISET (mA) | Supply readback minus meter (mA) | Meter spread (mA) |
 |---|---|---|---|---|
@@ -561,9 +567,34 @@ Electronic load in constant-voltage mode at 3.0 V, VSET 5 V, so that the supply 
 | 1.00 | 0.9862 | -13.8 | -2.2 | 0.5 |
 | 0.30 | 0.2867 | -13.3 | -2.7 | 0.8 |
 
-The current limit is stable and linear, and the tool reported CC at every step. Every setting delivers about 13.5 mA less than ISET: a constant offset, outside the vendor specification of 0.1 % + 5 mA (5.5 mA at 0.5 A). It is most likely a current-calibration offset of this unit (INFERRED; the manual says that current calibration needs a 10 A load and is not recommended for users). It is not a tool problem: the tool sends the right raw value. The readback is 2 to 7 mA below the meter and noisier at low current (0.065 to 0.084 A at ISET 0.10 A).
+The current limit was stable and linear, and the tool reported CC at every step. Every setting delivered about 13.5 mA less than ISET: a constant offset, outside the vendor specification of 0.1 % + 5 mA (5.5 mA at 0.5 A). That was the current calibration of an uncalibrated unit (INFERRED at the time; the manual says that current calibration needs a 10 A load and is not recommended for users; the front-panel calibration below removed the offset), not a tool problem: the tool sent the right raw value. The readback was 2 to 7 mA below the meter and noisier at low current (0.065 to 0.084 A at ISET 0.10 A).
 
-Lowering ISET from 1.0 A to 0.3 A and OCP from 1.5 A to 0.6 A in one call while 1 A flowed sent ISET first and OCP after the current had come down; no trip. All CC points were taken at an output of about 3 V and up to 1 A.
+Lowering ISET from 1.0 A to 0.3 A and OCP from 1.5 A to 0.6 A in one call while 1 A flowed sent ISET first and OCP after the current had come down; no trip.
+
+The user then calibrated the supply's current on the front panel ("Current Correction" in the settings menu) with the Fluke 289 as the reference. The tool cannot calibrate: the firmware has no serial command for it.
+
+After the current calibration (third session; tests/hw/bench_289_cc_cvload.py with --points and --cc-only; the supply in CC at every point, read as CC at every sample; OCP 5.8 A, OPP 100 W). Each point had a 1.5 s settle after the ISET step and then a 4 s window: the supply sampled every 0.5 s, the meter median over the window.
+
+| ISET (A) | Meter (A) | Meter minus ISET (mA) | Meter spread (mA) | Supply readback mean (A) | Readback span (A) | Readback minus meter (mA) |
+|---|---|---|---|---|---|---|
+| 0.05 | 0.0518 | +1.8 | 8.4 | 0.0456 | 0.025 to 0.066 | -6.2 |
+| 0.10 | 0.1023 | +2.3 | 2.8 | 0.0934 | 0.088 to 0.116 | -8.9 |
+| 0.25 | 0.2523 | +2.3 | 0.4 | 0.2458 | 0.215 to 0.275 | -6.5 |
+| 0.40 | 0.4022 | +2.2 | 0.5 | 0.3986 | 0.398 to 0.400 | -3.6 |
+| 0.50 | 0.5021 | +2.1 | 0.7 | 0.4988 | 0.498 to 0.500 | -3.3 |
+| 1.00 | 1.0022 | +2.2 | 0.5 | 0.9980 | 0.998 to 0.998 | -4.2 |
+| 2.00 | 2.0016 | +1.6 | 0.6 | 1.9980 | 1.998 to 1.998 | -3.6 |
+| 3.00 | 3.0012 | +1.2 | 0.6 | 2.9980 | 2.998 to 2.998 | -3.2 |
+| 4.00 | 4.0004 | +0.4 | 0.3 | 3.9980 | 3.998 to 3.998 | -2.4 |
+| 5.00 | 4.9996 | -0.4 | 0.3 | 4.9970 | 4.997 to 4.997 | -2.6 |
+
+- The current setting is now inside the vendor specification of 0.1 % + 5 mA at every point from 0.05 A to 5 A: at most +2.3 mA (0.1 A to 1 A), falling to -0.4 mA at 5 A.
+- The supply's readback is steady and inside the specification from 0.4 A up (2.4 to 4.2 mA below the meter). At 0.25 A and below it is noisy: single readings wander over 28 to 60 mA while the meter holds within 0.4 to 8 mA, and the mean reads 6 to 9 mA low. For small currents use the meter, or average many samples.
+- At 0.05 A the regulated current itself wanders a little (meter spread 8.4 mA; 18 mA in a first run whose window included the step transient). A first run without the 1.5 s settle showed the same setting errors (-0.5 to +5.1 mA) but readback means distorted by the step transient.
+- The output voltage rose from 3.04 V at 0.4 A to 3.49 V at 5 A: the load holds 3.0 V at its own terminals and the rest is the drop over the meter's current shunt and the leads (about 0.1 Ohm in all).
+- Supply temperature 32.7 C to 36.0 C during the run (17.5 W at 5 A), input the 65 W USB-PD charger (19.8 V).
+
+The earlier CC points were taken at an output of about 3 V and up to 1 A; the new ones also at about 3 V (2.9 to 3.5 V by the supply's readback) and up to 5 A.
 
 ### 12.5 CV first and CC first at switch-on
 
@@ -629,6 +660,6 @@ One serial error was seen: a WriteFile "access denied" (PermissionError 13) whil
 | What does the discharge pin do when the output is switched on with the menu open? | Role INFERRED. |
 | What are the values at EEPROM 0x10, 0x11 and 0x23/0x24? | Not reachable from serial; not traced. |
 | Exact mapping of colour IDs 0x53 and 0x54 to EEPROM slots. | Does not matter for the protocol. |
-| Why does every CC setting deliver about 13.5 mA less than ISET on this unit? | MEASURED constant offset, outside the vendor 0.1 % + 5 mA (section 12.4). Probably the current calibration of this unit (INFERRED). The tool sends the right raw value. |
+| Why did every CC setting deliver about 13.5 mA less than ISET on this unit? | It was a MEASURED constant offset before the user calibrated the current on the front panel; after the calibration the setting is inside the vendor 0.1 % + 5 mA from 0.05 A to 5 A (section 12.4). The tool sent the right raw value throughout and cannot calibrate (no serial command); if the current is off, calibrate on the front panel. |
 | Do status queries and other frames write the EEPROM on the real supply? | Code evidence only (section 9). Needs a probe on the EEPROM's I2C lines. |
-| OCP, OPP and OTP trips, the settings-menu effects, currents above about 1.2 A, powers above about 15 W, the DC5525 input, and CC accuracy at output voltages other than about 3 V. | Not verified on hardware yet (see "Hardware status"). |
+| OCP, OPP and OTP trips, the settings-menu effects, currents above 5 A, powers above about 20 W, the DC5525 input, and CC accuracy at output voltages other than about 3 V. | Not verified on hardware yet (see "Hardware status"). |

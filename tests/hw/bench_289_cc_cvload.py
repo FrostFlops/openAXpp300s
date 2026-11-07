@@ -23,7 +23,13 @@ def main():
     ap.add_argument('--load-v', type=float, default=3.0)
     ap.add_argument('--out', default=os.path.join(ROOT, 'logs', 'hw_report_cc_cvload.json'))
     ap.add_argument('--hold', type=float, default=4.0)
+    ap.add_argument('--points', default='0.1,0.25,0.5,1.0', help='ISET values in A, ascending (keep ISET x load V '
+                    'within the supply input power and the load rating)')
+    ap.add_argument('--cc-only', action='store_true', help='only the ISET steps (skip the ISET+OCP lowering and '
+                    'the priority switch-on test)')
     a = ap.parse_args()
+    points = [float(x) for x in a.points.split(',')]
+    ocp = round(min(10.5, max(1.5, max(points) * 1.1 + 0.3)), 2)
     rep = {'started': time.strftime('%Y-%m-%d %H:%M:%S'), 'load_v': a.load_v, 'steps': []}
 
     def step(name, doc, extra=None):
@@ -40,6 +46,7 @@ def main():
         return d
 
     def hold(name, iset):
+        time.sleep(1.5)                       # let the step settle: the readback mean should be steady state
         w = cli('watch', '--for', '%gs' % a.hold, '--every', '0.5', '--quiet')
         vals = meter_window(a.meter_log, w['_t0'] + 1.5, w['_t1'] + 0.5)
         m = statistics.median(vals) if vals else None
@@ -58,14 +65,19 @@ def main():
     table = []
     try:
         step('off at start', cli('off'))
-        step('5 V, ISET 0.1, OVP 5.5, OCP 1.5', cli('set', '--voltage', '5', '--current', '0.1', '--ovp', '5.5',
-                                                   '--ocp', '1.5', '--opp', '100', '--otp', '80', '--delay', '0',
-                                                   '--rev', '0'))
+        step('5 V, ISET %g, OVP 5.5, OCP %g' % (points[0], ocp), cli(
+            'set', '--voltage', '5', '--current', str(points[0]), '--ovp', '5.5', '--ocp', str(ocp), '--opp', '100',
+            '--otp', '80', '--delay', '0', '--rev', '0'))
         step('on into the CV load', cli('on'))
-        for iset in (0.1, 0.25, 0.5, 1.0):
-            if iset != 0.1:
+        for k, iset in enumerate(points):
+            if k:
                 step('ISET %g' % iset, cli('set', '--current', str(iset)))
             table.append(hold('CC at ISET %g A' % iset, iset))
+        if a.cc_only:
+            step('ISET back to %g' % points[0], cli('set', '--current', str(points[0])))
+            step('off', cli('off'))
+            rep['table'] = table
+            return
         # lower ISET 1.0 -> 0.3 and OCP 1.5 -> 0.6 together while 1 A flows: OCP must go after the current came down
         d = cli('set', '--current', '0.3', '--ocp', '0.6')
         step('lower ISET and OCP together under 1 A', d)

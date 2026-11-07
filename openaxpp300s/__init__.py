@@ -11,4 +11,4 @@ Modules:
   sim        - virtual PP300S (tests, CI, trying the tool without hardware)
 Run the CLI with `python -m openaxpp300s --help`.
 """
-__version__ = "0.1.0"
+__version__ = "0.1.1"
