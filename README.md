@@ -59,14 +59,16 @@ runs against the simulator (see [Simulator](#simulator)); no test opens a real p
 
 Requirements: Python 3.10 or newer, the supply, a USB cable. The only dependency is `pyserial`.
 
-The package is **not on PyPI yet**. Install it from a checkout:
+From PyPI:
 
 ```
-pip install -e .
+pip install openaxpp300s
 ```
 
-Once it is published, `pip install openaxpp300s` will do the same. Either way the install provides the commands
-`openaxpp300s` and `openaxpp300s-mcp`; `python -m openaxpp300s ...` is the same as `openaxpp300s ...`.
+Or from a checkout (for development): `pip install -e .` (add `".[test]"` for the tests). Either way the install
+provides the commands `openaxpp300s` and `openaxpp300s-mcp`; `python -m openaxpp300s ...` is the same as
+`openaxpp300s ...`. Releases: a tag `vX.Y.Z` runs `.github/workflows/release.yml` (tests, build, GitHub release,
+PyPI by trusted publishing).
 
 ## Connecting the supply
 

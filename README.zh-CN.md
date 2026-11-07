@@ -52,14 +52,15 @@ Linux 和 macOS:串口层没有 Windows 专用路径,但只在 Windows 上试过
 
 要求:Python 3.10 或更高版本、电源、一根 USB 线。唯一的依赖是 `pyserial`。
 
-该包**尚未发布到 PyPI**。请从源码目录安装:
+从 PyPI 安装:
 
 ```
-pip install -e .
+pip install openaxpp300s
 ```
 
-发布之后,`pip install openaxpp300s` 的效果相同。无论哪种方式,都会安装 `openaxpp300s` 和 `openaxpp300s-mcp` 两个命令;
-`python -m openaxpp300s ...` 与 `openaxpp300s ...` 等价。
+或从源码目录安装(用于开发):`pip install -e .`(运行测试请用 `".[test]"`)。无论哪种方式,都会安装 `openaxpp300s` 和
+`openaxpp300s-mcp` 两个命令;`python -m openaxpp300s ...` 与 `openaxpp300s ...` 等价。发布:推送标签 `vX.Y.Z` 会运行
+`.github/workflows/release.yml`(测试、构建、GitHub release,并通过 trusted publishing 发布到 PyPI)。
 
 ## 连接电源
 
