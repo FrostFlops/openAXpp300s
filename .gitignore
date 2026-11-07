@@ -1,0 +1,19 @@
+# runtime data (state: locks, last values sent, limits, stop requests, simulator state, MCP jobs; data: logs)
+state/
+data/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+
+# Vendor material (manuals, firmware image, vendor PC app, FlyMcu) and raw hardware captures: local only,
+# never redistributed.
+Vendor/
+FlyMcuConfig.ini
+logs/
+re/

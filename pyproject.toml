@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openaxpp300s"
+dynamic = ["version"]
+description = "Open CLI, Python library and MCP server for the AX PP300S buck-boost bench power supply (AxinDIY) over its USB serial port, made for AI agents"
+readme = "README.md"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = ["pyserial>=3.5"]
+keywords = ["power supply", "psu", "bench", "pp300s", "axindiy", "serial", "mcp", "agent", "instrument"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+]
+
+[project.urls]
+Homepage = "https://github.com/FrostFlops/openAXpp300s"
+Issues = "https://github.com/FrostFlops/openAXpp300s/issues"
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-timeout"]
+
+[project.scripts]
+openaxpp300s = "openaxpp300s.cli:main"
+openaxpp300s-mcp = "openaxpp300s.mcp_server:main"
+
+[tool.setuptools]
+packages = ["openaxpp300s"]
+
+[tool.setuptools.dynamic]
+version = {attr = "openaxpp300s.__version__"}
+
+[tool.pytest.ini_options]
+markers = ["hw: needs a real AX PP300S (and for some tests a Fluke 289 via open289) (run with: pytest -m hw)"]
+addopts = "-m 'not hw'"
+timeout = 180
